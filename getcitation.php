@@ -86,7 +86,7 @@ function dirify($str)
 
 function getAuthorList($row) {
 	$authors[] = $row['name'];
-	$coauthors = array(
+	$keys = array(
 		'co_author_1',
 		'co_author_2',
 		'co_author_3',
@@ -99,7 +99,7 @@ function getAuthorList($row) {
 		'co_author_10',
 	);
 
-	foreach ($coauthors as $ca_key) {
+	foreach ($keys as $ca_key) {
 		if ($row[$ca_key]) {
 			$authors[] = $row[$ca_key];
 		}
@@ -170,6 +170,69 @@ function getDateString($row) {
 	return "($disp)"; 
 }
 
+function getEditorList($row) {
+	$editors[] = array();
+	$keys = array(
+		'editor_1',
+		'editor_2',
+		'editor_3',
+		'editor_4',
+	);
+
+	foreach ($keys as $ekey) {
+		if ($row[$ekey]) {
+			$editors[] = $row[$ekey];
+		}
+	}
+
+	$formatted_auths = array();
+	foreach ($authors as $auth) {
+		$initials = array();
+		$set = explode(', ',$auth);
+		$last = trim(array_shift($set));
+		$names = explode(' ',$set[0]);
+
+		foreach ($names as $name) {
+			$initial = substr($name,0,1);
+			$initial = substr($name,0,1);
+			$initial = substr($name,0,1);
+			$initials[] = $initial.'.';
+		}
+		$new_auth = $last.','.join('',$initials);
+		$formatted_auths[] = $new_auth;
+	}
+	$last_author = array_pop($formatted_auths);
+	if (count($formatted_auths)) {
+		return join(', ',$formatted_auths)." & ".$last_author;
+	} else {
+		//only one author
+		return $last_author;
+	}
+
+
+}
+
+function getWorkTitle($row) {
+	switch ($row['type']) {
+	case 'AR': //article
+		return $row['journal_or_publisher_name'];
+	case 'BK': //book
+		return $row['book_title'];
+	case 'BC': //book chapter
+		return 'In '.$row['book_title'];
+	case 'MO': //monograph
+		return $row['book_title'];
+	case 'TR': //technical report
+	case 'AB': //abstract
+	case 'PR': //proceeding
+	case 'OP': //other publication
+	case 'BR': //book review
+	case 'NP': //newspaper
+	default:
+		return $row['journal_or_publisher_name'];
+	}
+}
+
 $fields = array();
 
 $row = $sth->fetch();
@@ -179,7 +242,14 @@ foreach ($row as $k => $v) {
 
 $sets = array();
 
-while ($row = $sth->fetch()) {
+$all = $sth->fetchAll();
+$data_array = unserialize(file_get_contents('data'));
+
+print_r($data_array);
+
+
+
+while (0) {
 	if (!isset($row['eid']) || !$row['eid']) {
 		$row['eid'] = dirify($row['name']);
 	}
@@ -191,8 +261,7 @@ while ($row = $sth->fetch()) {
 	print ' ';
 	print $row['title'];
 	print '. ';
-	print $row['book_title'];
-	print $row['journal_or_publisher_name'];
+	print getWorkTitle($row);
 	print '. ';
 	print "\n\n------- CITATION-------------\n\n";
 
