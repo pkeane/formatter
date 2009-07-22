@@ -110,10 +110,11 @@ function getAuthorList($row) {
 		$initials = array();
 		$set = explode(', ',$auth);
 		$last = trim(array_shift($set));
-		print "LAST: ".$last."\n";
 		$names = explode(' ',$set[0]);
 
 		foreach ($names as $name) {
+			$initial = substr($name,0,1);
+			$initial = substr($name,0,1);
 			$initial = substr($name,0,1);
 			$initials[] = $initial.'.';
 		}
@@ -121,7 +122,52 @@ function getAuthorList($row) {
 		$formatted_auths[] = $new_auth;
 	}
 	$last_author = array_pop($formatted_auths);
-	return join(', ',$formatted_auths)." & ".$last_author;
+	if (count($formatted_auths)) {
+		return join(', ',$formatted_auths)." & ".$last_author;
+	} else {
+		//only one author
+		return $last_author;
+	}
+}
+
+function getDateString($row) {
+	$ts = strtotime($row['date_published']);
+
+	switch ($row['type']) {
+	case 'AR': //article
+		$disp = date('Y, F',$ts);
+		break;
+	case 'BK': //book
+		$disp = date('Y',$ts);
+		break;
+	case 'BC': //book chapter
+		$disp = date('Y',$ts);
+		break;
+	case 'MO': //monograph
+		$disp = date('Y',$ts);
+		break;
+	case 'TR': //technical report
+		$disp = date('Y',$ts);
+		break;
+	case 'AB': //abstract
+		$disp = date('Y',$ts);
+		break;
+	case 'PR': //proceeding
+		$disp = date('Y',$ts);
+		break;
+	case 'OP': //other publication
+		$disp = date('Y',$ts);
+		break;
+	case 'BR': //book review
+		$disp = date('Y',$ts);
+		break;
+	case 'NP': //newspaper
+		$disp = date('Y',$ts);
+		break;
+	default:
+		$disp = date('Y',$ts);
+	}
+	return "($disp)"; 
 }
 
 $fields = array();
@@ -137,9 +183,24 @@ while ($row = $sth->fetch()) {
 	if (!isset($row['eid']) || !$row['eid']) {
 		$row['eid'] = dirify($row['name']);
 	}
-
-	print "\n\n CITATION ({$row['eid']}):\n\n";
+	print "\n\n\n-------BEGIN RECORD {$row['id']}-------------\n\n";
+	print "\n-------CITATION-------------\n\n";
 	print getAuthorList($row);
-	unset($cos);
+	print ' ';
+	print getDateString($row);
+	print ' ';
+	print $row['title'];
+	print '. ';
+	print $row['book_title'];
+	print $row['journal_or_publisher_name'];
+	print '. ';
+	print "\n\n------- CITATION-------------\n\n";
+
+	foreach ($row as $k => $val) {
+		if ($val) {
+			print "$k: $val\n";
+		}
+	}
+
 }
 
