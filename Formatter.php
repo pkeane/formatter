@@ -255,11 +255,11 @@ Authorship
 		case 'BK': //book
 			return $row['book_title'];
 		case 'BC': //book chapter
-			$pp = getPages($row);
+			$pp = $this->getPages($row);
 			if ($pp) {
 				$pp = ' (pp.'.$pp.')';
 			}
-			$ed = getEditorList($row);
+			$ed = $this->getEditorList($row);
 			if ($ed) {
 				if (strpos($ed,'&')) {
 					return "In ".$this->getEditorList($row).' (Eds.), '.$row['book_title'].$pp.'.';
@@ -331,6 +331,13 @@ Authorship
 		return $fmt;
 	}
 
+	function getEids()
+	{
+		$res = array_keys($this->citations_by_eid);
+		sort($res);
+		return $res;
+	}
+
 	function getByEid($eid) {
 		$data = $this->citations_by_eid[$eid];
 		uasort($data,array('Formatter','sortByYear'));
@@ -338,5 +345,22 @@ Authorship
 			$res[] = $this->getFormatted($raw);
 		}
 		return join("<p>",$res);
+	}
+
+	function getRawByEid($eid) {
+		$data = $this->citations_by_eid[$eid];
+		uasort($data,array('Formatter','sortByYear'));
+		$headers = $data[0];
+		foreach ($headers as $k => $v) {
+			$table .= "<th>".$k."</th>";
+		}
+		foreach ($data as $raw) {
+			$table .= "<tr>";
+			foreach ($raw as $k => $v) {
+				$table .= "<td>&nbsp;".$v."</td>";
+			}
+			$table .= "</tr>";
+		}
+		return "<table border=\"1\" cellpadding=\"4\">$table</table>";
 	}
 }
