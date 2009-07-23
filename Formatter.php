@@ -3,7 +3,7 @@
 class Formatter 
 {
 
-	$citations_by_eid;
+	public $citations_by_eid;
 
 	public function __construct() 
 	{
@@ -23,6 +23,17 @@ class Formatter
 		}
 		$this->citations_by_eid = $citations_by_eid;
 	}
+
+	public static function sortByYear($b,$a)
+	{
+		$year_a = substr($a['date_published'],0,4);
+		$year_b = substr($b['date_published'],0,4);
+		if ($year_a == $year_b) {
+			return 0;
+		}
+		return ($year_a < $year_b) ? -1 : 1;
+	}
+
 
 /*
 $dbh = new PDO('mysql:host=mysql.laits.utexas.edu;dbname=pkeane_bibcite','bibcite_user','bibcite_user');
@@ -145,7 +156,7 @@ Authorship
 				$initial = substr($name,0,1);
 				$initials[] = $initial.'.';
 			}
-			$new_auth = $last.','.join('',$initials);
+			$new_auth = $last.', '.join('',$initials);
 			$formatted_auths[] = $new_auth;
 		}
 		$last_author = array_pop($formatted_auths);
@@ -251,9 +262,9 @@ Authorship
 			$ed = getEditorList($row);
 			if ($ed) {
 				if (strpos($ed,'&')) {
-					return "In ".getEditorList($row).' (Eds.), '.$row['book_title'].$pp.'.';
+					return "In ".$this->getEditorList($row).' (Eds.), '.$row['book_title'].$pp.'.';
 				} else {
-					return "In ".getEditorList($row).' (Ed.), '.$row['book_title'].$pp.'.';
+					return "In ".$this->getEditorList($row).' (Ed.), '.$row['book_title'].$pp.'.';
 				}
 			} else {
 				return "In ".$row['book_title'].$pp.'.';
@@ -279,7 +290,7 @@ Authorship
 			if ($num) {
 				$vol = "$vol($num)";
 			}
-			return $vol.', '.getPages($row).'.';
+			return $vol.', '.$this->getPages($row).'.';
 		case 'BK': //book
 		case 'BC': //book chapter
 			return $row['city_of_publication'].': '.$row['journal_or_publisher_name'].'.';
@@ -308,23 +319,24 @@ Authorship
 	}
 
 	function getFormatted($raw) {
-		$fmt = getAuthorList($raw);
+		$fmt = $this->getAuthorList($raw);
 		$fmt .= ' ';
-		$fmt .= getDateString($raw);
+		$fmt .= $this->getDateString($raw);
 		$fmt .= ' ';
-		$fmt .= getTitle($raw); 
+		$fmt .= $this->getTitle($raw); 
 		$fmt .= '. ';
-		$fmt .= getWorkTitle($raw);
+		$fmt .= $this->getWorkTitle($raw);
 		$fmt .= ' ';
-		$fmt .= getPubInfo($raw);
+		$fmt .= $this->getPubInfo($raw);
 		return $fmt;
 	}
 
 	function getByEid($eid) {
-		$data = $this->citations_by_eid;
-		foreach ($data[$eid] as $raw) {
-			$res[] = getFormatted($raw);
+		$data = $this->citations_by_eid[$eid];
+		uasort($data,array('Formatter','sortByYear'));
+		foreach ($data as $raw) {
+			$res[] = $this->getFormatted($raw);
 		}
-		return join("\n\n",$res);
+		return join("<p>",$res);
 	}
 }
