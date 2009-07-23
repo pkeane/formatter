@@ -1,11 +1,16 @@
 <?php
 
 
+/*
 $dbh = new PDO('mysql:host=mysql.laits.utexas.edu;dbname=pkeane_bibcite','bibcite_user','bibcite_user');
 $sql = "SELECT * FROM publication";
 $sth = $dbh->prepare($sql);
 $sth->setFetchMode(PDO::FETCH_ASSOC);
 $sth->execute();
+$data_array = $sth->fetchAll();
+ */
+$data_array = unserialize(file_get_contents('data'));
+
 
 /**
 id
@@ -114,8 +119,6 @@ function getAuthorList($row) {
 
 		foreach ($names as $name) {
 			$initial = substr($name,0,1);
-			$initial = substr($name,0,1);
-			$initial = substr($name,0,1);
 			$initials[] = $initial.'.';
 		}
 		$new_auth = $last.','.join('',$initials);
@@ -171,7 +174,7 @@ function getDateString($row) {
 }
 
 function getEditorList($row) {
-	$editors[] = array();
+	$editors = array();
 	$keys = array(
 		'editor_1',
 		'editor_2',
@@ -185,31 +188,29 @@ function getEditorList($row) {
 		}
 	}
 
-	$formatted_auths = array();
-	foreach ($authors as $auth) {
+	$formatted = array();
+	foreach ($editors as $ed) {
 		$initials = array();
-		$set = explode(', ',$auth);
+		$set = explode(', ',$ed);
 		$last = trim(array_shift($set));
-		$names = explode(' ',$set[0]);
+		if (count($set)) {
+			$names = explode(' ',$set[0]);
 
-		foreach ($names as $name) {
-			$initial = substr($name,0,1);
-			$initial = substr($name,0,1);
-			$initial = substr($name,0,1);
-			$initials[] = $initial.'.';
+			foreach ($names as $name) {
+				$initial = substr($name,0,1);
+				$initials[] = $initial.'.';
+			}
 		}
-		$new_auth = $last.','.join('',$initials);
-		$formatted_auths[] = $new_auth;
+		$new_auth = join('',$initials).' '.$last;
+		$formatted[] = $new_auth;
 	}
-	$last_author = array_pop($formatted_auths);
-	if (count($formatted_auths)) {
-		return join(', ',$formatted_auths)." & ".$last_author;
+	$last_ed = array_pop($formatted);
+	if (count($formatted)) {
+		return join(', ',$formatted)." & ".$last_ed;
 	} else {
 		//only one author
-		return $last_author;
+		return $last_ed;
 	}
-
-
 }
 
 function getWorkTitle($row) {
@@ -219,7 +220,7 @@ function getWorkTitle($row) {
 	case 'BK': //book
 		return $row['book_title'];
 	case 'BC': //book chapter
-		return 'In '.$row['book_title'];
+		return "In ".getEditorList($row).' (Ed.) '.$row['book_title'];
 	case 'MO': //monograph
 		return $row['book_title'];
 	case 'TR': //technical report
@@ -233,23 +234,21 @@ function getWorkTitle($row) {
 	}
 }
 
+function getTitle($row) {
+	return $row['title'];
+}
+
 $fields = array();
 
-$row = $sth->fetch();
+$row = array_shift($data_array);
 foreach ($row as $k => $v) {
 	$fields[] = $k;
 }
 
 $sets = array();
 
-$all = $sth->fetchAll();
-$data_array = unserialize(file_get_contents('data'));
 
-print_r($data_array);
-
-
-
-while (0) {
+foreach ($data_array as $row) {
 	if (!isset($row['eid']) || !$row['eid']) {
 		$row['eid'] = dirify($row['name']);
 	}
@@ -259,7 +258,7 @@ while (0) {
 	print ' ';
 	print getDateString($row);
 	print ' ';
-	print $row['title'];
+	print getTitle($row); 
 	print '. ';
 	print getWorkTitle($row);
 	print '. ';
@@ -270,6 +269,5 @@ while (0) {
 			print "$k: $val\n";
 		}
 	}
-
 }
 
