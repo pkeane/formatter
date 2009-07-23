@@ -11,6 +11,22 @@ $data_array = $sth->fetchAll();
  */
 $data_array = unserialize(file_get_contents('data'));
 
+$citations_by_eid = array();
+foreach ($data_array as $citation) {
+	if (!isset($citation['eid'])) {
+		$citation['eid'] = dirify($citation['name']);
+	}
+	if (!isset($citations_by_eid[$citation['eid']])) {
+		$citations_by_eid[$citation['eid']] = array();
+		$citations_by_eid[$citation['eid']][] = $citation;
+	} else {
+		$citations_by_eid[$citation['eid']][] = $citation;
+	}
+}
+
+//print_r($citations_by_eid);exit;
+
+print getByEid($citations_by_eid,'ja8294');
 
 /**
 id
@@ -216,13 +232,50 @@ function getEditorList($row) {
 function getWorkTitle($row) {
 	switch ($row['type']) {
 	case 'AR': //article
-		return $row['journal_or_publisher_name'];
+		return $row['journal_or_publisher_name'].',';
 	case 'BK': //book
 		return $row['book_title'];
 	case 'BC': //book chapter
-		return "In ".getEditorList($row).' (Ed.) '.$row['book_title'];
+		$pp = getPages($row);
+		if ($pp) {
+			$pp = ' (pp.'.$pp.')';
+		}
+		$ed = getEditorList($row);
+		if ($ed) {
+			if (strpos($ed,'&')) {
+				return "In ".getEditorList($row).' (Eds.), '.$row['book_title'].$pp.'.';
+			} else {
+				return "In ".getEditorList($row).' (Ed.), '.$row['book_title'].$pp.'.';
+			}
+		} else {
+			return "In ".$row['book_title'].$pp.'.';
+		}
 	case 'MO': //monograph
 		return $row['book_title'];
+	case 'TR': //technical report
+	case 'AB': //abstract
+	case 'PR': //proceeding
+	case 'OP': //other publication
+	case 'BR': //book review
+	case 'NP': //newspaper
+	default:
+		return $row['journal_or_publisher_name'];
+	}
+}
+
+function getPubInfo($row) {
+	switch ($row['type']) {
+	case 'AR': //article
+		$vol = $row['volume'];
+		$num = $row['number'];
+		if ($num) {
+			$vol = "$vol($num)";
+		}
+		return $vol.', '.getPages($row).'.';
+	case 'BK': //book
+	case 'BC': //book chapter
+		return $row['city_of_publication'].': '.$row['journal_or_publisher_name'].'.';
+	case 'MO': //monograph
 	case 'TR': //technical report
 	case 'AB': //abstract
 	case 'PR': //proceeding
@@ -238,36 +291,30 @@ function getTitle($row) {
 	return $row['title'];
 }
 
-$fields = array();
-
-$row = array_shift($data_array);
-foreach ($row as $k => $v) {
-	$fields[] = $k;
-}
-
-$sets = array();
-
-
-foreach ($data_array as $row) {
-	if (!isset($row['eid']) || !$row['eid']) {
-		$row['eid'] = dirify($row['name']);
-	}
-	print "\n\n\n-------BEGIN RECORD {$row['id']}-------------\n\n";
-	print "\n-------CITATION-------------\n\n";
-	print getAuthorList($row);
-	print ' ';
-	print getDateString($row);
-	print ' ';
-	print getTitle($row); 
-	print '. ';
-	print getWorkTitle($row);
-	print '. ';
-	print "\n\n------- CITATION-------------\n\n";
-
-	foreach ($row as $k => $val) {
-		if ($val) {
-			print "$k: $val\n";
-		}
+function getPages($row) {
+	if ($row['page_to'] && $row['page_from']) {
+		return $row['page_from'].'-'.$row['page_to'];
+	} else {
+		return '';
 	}
 }
 
+function getFormatted($raw) {
+	$fmt = getAuthorList($raw);
+	$fmt .= ' ';
+	$fmt .= getDateString($raw);
+	$fmt .= ' ';
+	$fmt .= getTitle($raw); 
+	$fmt .= '. ';
+	$fmt .= getWorkTitle($raw);
+	$fmt .= ' ';
+	$fmt .= getPubInfo($raw);
+	return $fmt;
+}
+
+function getByEid($data,$eid) {
+	foreach ($data[$eid] as $raw) {
+		$res[] = getFormatted($raw);
+	}
+	return join("\n\n",$res);
+}
