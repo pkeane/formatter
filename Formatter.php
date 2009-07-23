@@ -36,7 +36,7 @@ class Formatter
 
 
 /*
-$dbh = new PDO('mysql:host=mysql.laits.utexas.edu;dbname=pkeane_bibcite','bibcite_user','bibcite_user');
+$dbh = new PDO('mysql:host=x;dbname=x','x','x');
 $sql = "SELECT * FROM publication";
 $sth = $dbh->prepare($sql);
 $sth->setFetchMode(PDO::FETCH_ASSOC);
