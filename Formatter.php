@@ -3,28 +3,7 @@
 class Formatter 
 {
 
-	public $citations_by_eid;
-
-	public function __construct() 
-	{
-		$data_array = unserialize(file_get_contents('data'));
-
-		$citations_by_eid = array();
-		foreach ($data_array as $citation) {
-			if (!isset($citation['eid'])) {
-				$citation['eid'] = dirify($citation['name']);
-			}
-			if (!isset($citations_by_eid[$citation['eid']])) {
-				$citations_by_eid[$citation['eid']] = array();
-				$citations_by_eid[$citation['eid']][] = $citation;
-			} else {
-				$citations_by_eid[$citation['eid']][] = $citation;
-			}
-		}
-		$this->citations_by_eid = $citations_by_eid;
-	}
-
-	public static function sortByYear($b,$a)
+	private function sortByYear($b,$a)
 	{
 		$year_a = substr($a['date_published'],0,4);
 		$year_b = substr($b['date_published'],0,4);
@@ -34,97 +13,13 @@ class Formatter
 		return ($year_a < $year_b) ? -1 : 1;
 	}
 
-
-/*
-$dbh = new PDO('mysql:host=x;dbname=x','x','x');
-$sql = "SELECT * FROM publication";
-$sth = $dbh->prepare($sql);
-$sth->setFetchMode(PDO::FETCH_ASSOC);
-$sth->execute();
-$data_array = $sth->fetchAll();
- */
-
-
-//	print getByEid($citations_by_eid,'ja8294');
-
-/**
-id
-eid
-name
-department
-title
-book_title
-type
-status
-journal_or_publisher_name
-city_of_publication
-referee_tier
-date_published
-authorship
-volume
-number
-month_season
-page_from
-page_to
-pub_url
-co_author_1
-co_author_2
-co_author_3
-co_author_4
-co_author_5
-co_author_6
-co_author_7
-co_author_8
-co_author_9
-co_author_10
-editor_1
-editor_2
-editor_3
-editor_4
-notes
-station
-assembled_citation
-display_citation
-file
-_updated
-_updatedby
-
-Authorship
-	a.       S = sole author
-	b.      C = co-author
-	c.       E = editor
-	d.      T = translator
-
-	Type
-	a.       AR = article
-	b.      BK = book
-	c.       BC = book chapter
-	d.      MO = monograph
-	e.      TR = technical report
-	f.        AB = abstract
-	g.       PR = proceeding
-	h.      OP = other publications (museum catalogs, commentaries [unless
-	refereed], columns, conference papers [unless refereed], external
-	reviews, editing of film scripts, abstracts)
-	i.         BR = book review
-	j.        NP = newspaper
-
-	Status
-	a.       PB = published
-	b.      IP = in press
-	c.       RR = revise and resubmit
-	d.      SB = submitted
-	e.      PR = in prep
-
- */
-
-	function dirify($str)
+	private function dirify($str)
 	{
 		$str = strtolower(preg_replace('/[^a-zA-Z0-9_-]/','_',trim($str)));
 		return preg_replace('/__*/','_',$str);
 	}
 
-	function getAuthorList($row) {
+	private function getAuthorList($row) {
 		$authors[] = $row['name'];
 		$keys = array(
 			'co_author_1',
@@ -168,7 +63,7 @@ Authorship
 		}
 	}
 
-	function getDateString($row) {
+	private function getDateString($row) {
 		$ts = strtotime($row['date_published']);
 
 		switch ($row['type']) {
@@ -208,7 +103,7 @@ Authorship
 		return "($disp)"; 
 	}
 
-	function getEditorList($row) {
+	private function getEditorList($row) {
 		$editors = array();
 		$keys = array(
 			'editor_1',
@@ -248,7 +143,7 @@ Authorship
 		}
 	}
 
-	function getWorkTitle($row) {
+	private function getWorkTitle($row) {
 		switch ($row['type']) {
 		case 'AR': //article
 			return $row['journal_or_publisher_name'].',';
@@ -282,7 +177,43 @@ Authorship
 		}
 	}
 
-	function getPubInfo($row) {
+	private function getHtmlWorkTitle($row) {
+		$row['book_title'] = '<em>'.$row['book_title'].'</em>';
+		$row['journal_or_publisher_name'] = '<em>'.$row['journal_or_publisher_name'].'</em>';
+		switch ($row['type']) {
+		case 'AR': //article
+			return $row['journal_or_publisher_name'].',';
+		case 'BK': //book
+			return $row['book_title'];
+		case 'BC': //book chapter
+			$pp = $this->getPages($row);
+			if ($pp) {
+				$pp = ' (pp.'.$pp.')';
+			}
+			$ed = $this->getEditorList($row);
+			if ($ed) {
+				if (strpos($ed,'&')) {
+					return "In ".$this->getEditorList($row).' (Eds.), '.$row['book_title'].$pp.'.';
+				} else {
+					return "In ".$this->getEditorList($row).' (Ed.), '.$row['book_title'].$pp.'.';
+				}
+			} else {
+				return "In ".$row['book_title'].$pp.'.';
+			}
+		case 'MO': //monograph
+			return $row['book_title'];
+		case 'TR': //technical report
+		case 'AB': //abstract
+		case 'PR': //proceeding
+		case 'OP': //other publication
+		case 'BR': //book review
+		case 'NP': //newspaper
+		default:
+			return $row['journal_or_publisher_name'];
+		}
+	}
+
+	private function getPubInfo($row) {
 		switch ($row['type']) {
 		case 'AR': //article
 			$vol = $row['volume'];
@@ -306,11 +237,11 @@ Authorship
 		}
 	}
 
-	function getTitle($row) {
+	private function getTitle($row) {
 		return $row['title'];
 	}
 
-	function getPages($row) {
+	private function getPages($row) {
 		if ($row['page_to'] && $row['page_from']) {
 			return $row['page_from'].'-'.$row['page_to'];
 		} else {
@@ -318,49 +249,37 @@ Authorship
 		}
 	}
 
-	function getFormatted($raw) {
-		$fmt = $this->getAuthorList($raw);
+	public function getCitation($row) {
+		$fmt = $this->getAuthorList($row);
 		$fmt .= ' ';
-		$fmt .= $this->getDateString($raw);
+		$fmt .= $this->getDateString($row);
 		$fmt .= ' ';
-		$fmt .= $this->getTitle($raw); 
+		$fmt .= $this->getTitle($row); 
 		$fmt .= '. ';
-		$fmt .= $this->getWorkTitle($raw);
+		$fmt .= $this->getWorkTitle($row);
 		$fmt .= ' ';
-		$fmt .= $this->getPubInfo($raw);
+		$fmt .= $this->getPubInfo($row);
 		return $fmt;
 	}
 
-	function getEids()
-	{
-		$res = array_keys($this->citations_by_eid);
-		sort($res);
-		return $res;
+	public function getHtmlCitation($row) {
+		$fmt = $this->getAuthorList($row);
+		$fmt .= ' ';
+		$fmt .= $this->getDateString($row);
+		$fmt .= ' ';
+		$fmt .= '<strong>'.$this->getTitle($row).'</strong>'; 
+		$fmt .= '. ';
+		$fmt .= $this->getHtmlWorkTitle($row);
+		$fmt .= ' ';
+		$fmt .= $this->getPubInfo($row);
+		return $fmt;
 	}
 
-	function getByEid($eid) {
-		$data = $this->citations_by_eid[$eid];
-		uasort($data,array('Formatter','sortByYear'));
-		foreach ($data as $raw) {
-			$res[] = $this->getFormatted($raw);
+	public function getData($row) {
+		$str = '';
+		foreach ($row as $key => $val) {
+			$str .= $key.' : '.$val.' | ';
 		}
-		return join("<p>",$res);
-	}
-
-	function getRawByEid($eid) {
-		$data = $this->citations_by_eid[$eid];
-		uasort($data,array('Formatter','sortByYear'));
-		$headers = $data[0];
-		foreach ($headers as $k => $v) {
-			$table .= "<th>".$k."</th>";
-		}
-		foreach ($data as $raw) {
-			$table .= "<tr>";
-			foreach ($raw as $k => $v) {
-				$table .= "<td>&nbsp;".$v."</td>";
-			}
-			$table .= "</tr>";
-		}
-		return "<table border=\"1\" cellpadding=\"4\">$table</table>";
+		return $str;
 	}
 }
