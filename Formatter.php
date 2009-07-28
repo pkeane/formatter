@@ -204,9 +204,12 @@ class Formatter
 			return $row['book_title'];
 		case 'TR': //technical report
 		case 'AB': //abstract
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'PR': //proceeding
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'OP': //other publication
 		case 'BR': //book review
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'NP': //newspaper
 		default:
 			return $row['journal_or_publisher_name'];
