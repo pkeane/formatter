@@ -2,6 +2,35 @@
 
 class Formatter 
 {
+	public static $specs = 
+		array(
+			'status' => array(
+				'PB' => 'published',
+				'IP' => 'in press',
+				'RR' => 'revise and resubmit',
+				'SB' => 'submitted',
+				'PR' => 'in prep',
+			),
+			'authorship' => array(
+				'S' => 'sole author',
+				'C' => 'co-author',
+				'E' => 'editor',
+				'T' => 'translator',
+			),
+			'type' => array(
+				'AR' => 'article',
+				'BK' => 'book',
+				'BC' => 'book chapter',
+				'MO' => 'monograph',
+				'TR' => 'technical report',
+				'AB' => 'abstract',
+				'PR' => 'proceeding',
+				'OP' => 'other publications ',
+				'BR' => 'book review',
+				'NP' => 'newspaper',
+			),
+		);
+
 
 	private function sortByYear($b,$a)
 	{
@@ -64,6 +93,9 @@ class Formatter
 	}
 
 	private function getDateString($row) {
+		if ('0000-00-00' == $row['date_published']) {
+			return '0000';
+		}
 		$ts = strtotime($row['date_published']);
 
 		switch ($row['type']) {
@@ -89,7 +121,7 @@ class Formatter
 			$disp = date('Y',$ts);
 			break;
 		case 'OP': //other publication
-			$disp = date('Y',$ts);
+			$disp = date('Y, F',$ts);
 			break;
 		case 'BR': //book review
 			$disp = date('Y',$ts);
@@ -146,7 +178,11 @@ class Formatter
 	private function getWorkTitle($row) {
 		switch ($row['type']) {
 		case 'AR': //article
-			return $row['journal_or_publisher_name'].',';
+			if (strlen($this->getPubInfo($row)) < 2) {
+				return $row['journal_or_publisher_name'];
+			} else {
+				return $row['journal_or_publisher_name'].',';
+			}
 		case 'BK': //book
 			return $row['book_title'];
 		case 'BC': //book chapter
@@ -167,10 +203,15 @@ class Formatter
 		case 'MO': //monograph
 			return $row['book_title'];
 		case 'TR': //technical report
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'AB': //abstract
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'PR': //proceeding
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'OP': //other publication
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'BR': //book review
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'NP': //newspaper
 		default:
 			return $row['journal_or_publisher_name'];
@@ -182,7 +223,11 @@ class Formatter
 		$row['journal_or_publisher_name'] = '<em>'.$row['journal_or_publisher_name'].'</em>';
 		switch ($row['type']) {
 		case 'AR': //article
-			return $row['journal_or_publisher_name'].',';
+			if (strlen($this->getPubInfo($row)) < 2) {
+				return $row['journal_or_publisher_name'];
+			} else {
+				return $row['journal_or_publisher_name'].',';
+			}
 		case 'BK': //book
 			return $row['book_title'];
 		case 'BC': //book chapter
@@ -203,11 +248,13 @@ class Formatter
 		case 'MO': //monograph
 			return $row['book_title'];
 		case 'TR': //technical report
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'AB': //abstract
 			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'PR': //proceeding
 			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'OP': //other publication
+			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'BR': //book review
 			return $row['journal_or_publisher_name'] ? $row['journal_or_publisher_name'] : $row['book_title'];
 		case 'NP': //newspaper
@@ -217,6 +264,9 @@ class Formatter
 	}
 
 	private function getPubInfo($row) {
+		if ($row['city_of_publication']) {
+			$row['city_of_publication'] .= ':';
+		}
 		switch ($row['type']) {
 		case 'AR': //article
 			$vol = $row['volume'];
@@ -224,15 +274,30 @@ class Formatter
 			if ($num) {
 				$vol = "$vol($num)";
 			}
-			return $vol.', '.$this->getPages($row).'.';
+			if ($this->getPages($row)) {
+				return $vol.', '.$this->getPages($row).'.';
+			} else {
+				return $vol.'.';
+			}
 		case 'BK': //book
+			return $row['city_of_publication'].' '.$row['journal_or_publisher_name'].'.';
 		case 'BC': //book chapter
-			return $row['city_of_publication'].': '.$row['journal_or_publisher_name'].'.';
+			return $row['city_of_publication'].' '.$row['journal_or_publisher_name'].'.';
 		case 'MO': //monograph
+			return $row['city_of_publication'].' '.$row['journal_or_publisher_name'].'.';
 		case 'TR': //technical report
+			return $row['city_of_publication'].' '.$row['journal_or_publisher_name'].'.';
 		case 'AB': //abstract
+			return $row['city_of_publication'].' '.$row['journal_or_publisher_name'].'.';
 		case 'PR': //proceeding
+			return $row['city_of_publication'].' '.$row['journal_or_publisher_name'].'.';
 		case 'OP': //other publication
+			$vol = $row['volume'];
+			$num = $row['number'];
+			if ($num) {
+				$vol = "$vol($num)";
+			}
+			return $vol.', '.$this->getPages($row).'.';
 		case 'BR': //book review
 		case 'NP': //newspaper
 		default:
@@ -252,8 +317,29 @@ class Formatter
 		}
 	}
 
-	public function getCitation($row) {
-		$fmt = $this->getAuthorList($row);
+	private function isInvalid($row) {
+		if ('0000-00-00' == $row['date_published']) {
+			return true;
+		}
+		//if (in_array($row['status'],array('IP','RR','SB','PR'))) {
+		if (in_array($row['status'],array('RR','SB','PR'))) {
+			return true;
+		}
+		if (!$row['title']) {
+			return true;
+		}
+		if (!$row['name']) {
+			return true;
+		}
+		return false;
+	}
+
+	public function getCitation($row,$check=true) {
+		$fmt = '';
+		if ($check && $this->isInvalid($row)) {
+			$fmt .= "[INVALID] ";
+		}
+		$fmt .= $this->getAuthorList($row);
 		$fmt .= ' ';
 		$fmt .= $this->getDateString($row);
 		$fmt .= ' ';
@@ -262,11 +348,19 @@ class Formatter
 		$fmt .= $this->getWorkTitle($row);
 		$fmt .= ' ';
 		$fmt .= $this->getPubInfo($row);
+		$fmt = str_replace(' ,',',',$fmt);
+		$fmt = str_replace(' .','.',$fmt);
+		$fmt = str_replace(',,',',',$fmt);
+		$fmt = str_replace(',.','.',$fmt);
 		return $fmt;
 	}
 
-	public function getHtmlCitation($row) {
-		$fmt = $this->getAuthorList($row);
+	public function getHtmlCitation($row,$check=true) {
+		$fmt = '';
+		if ($check && $this->isInvalid($row)) {
+			$fmt .= "[INVALID] ";
+		}
+		$fmt .= $this->getAuthorList($row);
 		$fmt .= ' ';
 		$fmt .= $this->getDateString($row);
 		$fmt .= ' ';
@@ -275,6 +369,10 @@ class Formatter
 		$fmt .= $this->getHtmlWorkTitle($row);
 		$fmt .= ' ';
 		$fmt .= $this->getPubInfo($row);
+		$fmt = str_replace(' ,',',',$fmt);
+		$fmt = str_replace(' .','.',$fmt);
+		$fmt = str_replace(',,',',',$fmt);
+		$fmt = str_replace(',.','.',$fmt);
 		return $fmt;
 	}
 

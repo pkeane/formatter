@@ -5,7 +5,7 @@ include 'db.php';
 
 $f = new Formatter;
 
-$type = $_GET['type'];
+$status = $_GET['status'];
 
 $output = '';
 
@@ -39,20 +39,32 @@ $spec =
 	);
 
 
-if ($type) {
-	$sql = "SELECT * FROM publication where type = ? LIMIT 500";
+if ($status) {
+	if ('NONE' == $status) {
+		$sql = "SELECT * FROM publication where status NOT IN ('PB','IP','RR','SB','PR') LIMIT 1000";
+		$sth = $db->prepare($sql);
+		$sth->setFetchMode(PDO::FETCH_ASSOC);
+		$sth->execute();
+		while ($row = $sth->fetch()) {
+			$output .=  '<p>'.$f->getHtmlCitation($row)."</p>";
+		}
+	}
+	$sql = "SELECT * FROM publication where status = ? LIMIT 500";
 	$sth = $db->prepare($sql);
 	$sth->setFetchMode(PDO::FETCH_ASSOC);
-	$sth->execute(array($type));
+	$sth->execute(array($status));
 	while ($row = $sth->fetch()) {
 		$output .=  '<p>'.$f->getHtmlCitation($row)."</p>";
 	}
 } else {
-	foreach ($spec['type'] as $type => $label) {
-		$sql = "SELECT count(*) FROM publication where type = '$type'";
+	foreach ($spec['status'] as $status => $label) {
+		$sql = "SELECT count(*) FROM publication where status = '$status'";
 		$count = $db->query($sql)->fetchColumn();
-		$output .= "<p><a href=\"review.php?type=$type\">$label ($count)</a></p>";
+		$output .= "<p><a href=\"status.php?status=$status\">$label ($count)</a></p>";
 	}
+	$sql = "SELECT count(*) FROM publication where status NOT IN ('PB','IP','RR','SB','PR')";
+	$count = $db->query($sql)->fetchColumn();
+	$output .= "<p><a href=\"status.php?status=NONE\">NO STATUS ($count)</a></p>";
 }
 
 

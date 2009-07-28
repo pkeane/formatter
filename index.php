@@ -1,14 +1,21 @@
 <?php
 
+ini_set('display_errors',1);
+ini_set('display_startup_errors',1);
+error_reporting(E_ALL);
+
 include 'Formatter.php';
 include 'db.php';
 
 $f = new Formatter;
 
-
-$eid = $_GET['eid'];
-$html = $_GET['html'];
-$raw = $_GET['raw'];
+foreach (array('eid','raw','html','check') as $k) {
+	if (isset($_GET[$k])) {
+		$$k = $_GET[$k];
+	} else {
+		$$k = '';
+	}
+}
 
 $output = '';
 
@@ -27,9 +34,17 @@ if ($raw) {
 	$sth->execute(array($eid));
 	while ($row = $sth->fetch()) {
 		if ($html) {
-			$output .=  '<p>'.$f->getHtmlCitation($row)."</p>";
+			if ('no' == $check) {
+				$output .=  '<p>'.$f->getHtmlCitation($row,false)."</p>";
+			} else {
+				$output .=  '<p>'.$f->getHtmlCitation($row)."</p>";
+			}
 		} else {
-			$output .=  '<p>'.$f->getCitation($row)."</p>";
+			if ('no' == $check) {
+				$output .=  '<p>'.$f->getCitation($row,false)."</p>";
+			} else {
+				$output .=  '<p>'.$f->getCitation($row)."</p>";
+			}
 		}
 	}
 } else {
@@ -44,4 +59,9 @@ if ($raw) {
 	}
 }
 
-print "<html><body>$output</body></html>";
+print "<html><body>
+	<ul>
+	<li><a href=\"status.php\">by status</a></li>
+	<li><a href=\"type.php\">by type</a></li>
+	</ul>
+	$output</body></html>";
